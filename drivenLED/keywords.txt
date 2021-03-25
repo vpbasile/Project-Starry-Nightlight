@@ -1,0 +1,5 @@
+DrivenLED	KEYWORD1
+turnOn	KEYWORD2
+turnOff	KEYWORD2
+fade	KEYWORD2
+test	KEYWORD2
