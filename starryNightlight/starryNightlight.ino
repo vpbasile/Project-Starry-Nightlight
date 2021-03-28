@@ -1,72 +1,91 @@
-//Fibonacci sequence: 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597
+// ---Customize these paramters---
+const int mins=16; // This value determines how long the program will run
+const int loopsPerMin=16; // This value determines how fast the light twinkles 
+const int stepsPerLoop=256;
+// ---Stop customizing---
 
-#include <DrivenLED.h>
-
+// These can be adjusted to fix drivers that don't dither well
 int ledMinLevel = 0;
 int ledMaxLevel = 255;
-long runtimeResult=0;
 
-const int bluePin=9;
-const int amberPin=6;
+//Digesting the customized parameters
+const int loops=mins*loopsPerMin;
+const int delayTime = 60000/loopsPerMin/stepsPerLoop;
+
+const int bluexPin=9;
+int bluexTmp; int bluexDiff;
 const int whitePin=3;
+int whiteTmp; int whiteDiff;
+const int amberPin=6;
+int amberTmp; int amberDiff;
+const int shutoffPin = 2;
+float stepFrac;
 
 //Initialize the LEDs with the pin number
-DrivenLED blue(bluePin,ledMinLevel,ledMaxLevel);
+#include <DrivenLED.h>
+DrivenLED bluex(bluexPin,ledMinLevel,ledMaxLevel);
 DrivenLED amber(amberPin,ledMinLevel,ledMaxLevel);
 DrivenLED white(whitePin,ledMinLevel,ledMaxLevel);
 DrivenLED indicator(LED_BUILTIN,ledMinLevel,ledMaxLevel);
-const int shutoffPin = 2;
-
-const int runTime = 900; //15 minutes=900000ms
-const int twinkleTime = 2; //Half a second
-long amberSlope = -1; long amberBound;
-int amberCurrent; int amberNext;
-long whiteSlope = -2; long whiteBound;
-int whiteCurrent; int whiteNext; 
-long blueSlope = -3; long blueBound;
-int blueCurrent; int blueNext; 
 
 void setup() {
   Serial.begin(9600);
   Serial.println("-------Beginning Setup-------");
-  // Fade up the amber LED
+  // Fade up the amber LED to ledMaxLevel and store that value into the Current variable
   amberBound = ledMaxLevel;
   amber.fade(ledMinLevel,amberBound,1000);
   amberCurrent=amberBound;
-  // Fade up the white LED
+  // Fade up the white LEDto ledMaxLevel and store that value into the Current variable
   whiteBound = ledMaxLevel;
   white.fade(ledMinLevel,whiteBound,1000);
   whiteCurrent=whiteBound;
-  // Fade up the blue LED
-  blueBound = ledMaxLevel;
-  blue.fade(ledMinLevel,blueBound,1000);
-  blueCurrent=blueBound;
+  // Fade up the bluex LEDto ledMaxLevel and store that value into the Current variable
+  bluexBound = ledMaxLevel;
+  bluex.fade(ledMinLevel,bluexBound,1000);
+  bluexCurrent=bluexBound;
   randomSeed(analogRead(0)); // Set the random number seed by reading noise from pin 0
   Serial.println("-------Setup complete-------");
   // Loop from full to off very slowly
-  for (int i=1;i<256;i++){
-    blueBound=(256-4*i);
-    if (blueBound>-1){
-      blueNext=random(blueBound*random(0,1),blueBound);
-      Serial.print("blue:"); Serial.print(blueBound);Serial.print("-");Serial.print(blueCurrent);Serial.print("-");Serial.print(blueNext);Serial.print("\n");
-      blueCurrent=blue.fade(blueCurrent,blueNext,700);
-      randomPause();
-    }
-    whiteBound=(256-2*i);
-    if (whiteBound>-1){
-      whiteNext=random(0.7*whiteBound,whiteBound);
-      Serial.print("white:"); serialOutput(whiteCurrent,whiteNext,whiteBound);
-      whiteCurrent=white.fade(whiteCurrent,whiteNext,500);
-      randomPause();
-    }
-    amberBound=(256-i);
-    if (amberBound>-1){
-      amberNext=random(0.7*amberBound,amberBound);
-      Serial.print("amber:"); serialOutput(amberCurrent,amberNext,amberBound);
-      amberCurrent=amber.fade(amberCurrent,amberNext,200);
-      randomPause();
-    }
-  }
+for (int i=1;i<=loops;i++) {
+		// Decrease the bound for each color so that the random values get smaller as time goes by
+		bluexBound=(loops-4*i);
+		whiteBound=(loops-2*i);
+		amberBound=(loops-i);
+		
+		// Choose a next value that is random, but not too close to zero
+		bluexNext=random(bluexBound*random(0,1),bluexBound);
+		whiteNext=random(whiteBound*random(0,1),whiteBound);
+		amberNext=random(amberBound*random(0,1),amberBound);
+		
+		// Take a look at how much each color is going to change
+		bluexDiff=bluexNext-bluexCurrent;
+		whiteDiff=whiteNext-whiteCurrent;
+		amberDiff=amberNext-amberCurrent;
+		
+		for (int step=0;step<=stepsPerLoop;step++) {
+			stepFrac=step/stepsPerLoop;
+			
+			bluexTmp=bluexCurrent+(bluexDiff*stepFrac);
+			whiteTmp=whiteCurrent+(whiteDiff*stepFrac);
+			amberTmp=amberCurrent+(amberDiff*stepFrac);
+
+			//set the pins
+			analogWrite(bluexPin,bluexTmp);
+			analogWrite(whitePin,whiteTmp);
+      analogWrite(amberPin,amberTmp);
+
+			// Write stuff to the serial monitor for debugging purposes
+			Serial.print("bluex:" + bluexBound + "-" + bluexCurrent + "-" + bluexTmp + "-" + bluexNext + "\n");
+			Serial.print("white:" + whiteBound + "-" + whiteCurrent + "-" + whiteTmp + "-" + whiteNext + "\n");
+			Serial.print("amber:" + amberBound + "-" + amberCurrent + "-" + amberTmp + "-" + amberNext + "\n");
+			
+			delay(delayTime);
+		}
+		
+		bluexCurrent=bluexNext;
+		whiteCurrent=whiteNext;
+		amberCurrent=amberNext;
+	}
   shutDown();
 }
 
